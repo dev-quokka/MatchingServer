@@ -62,6 +62,9 @@ public:
 	}
 
 	bool RecvData();
+	void PushSendMsg(const uint32_t dataSize_, char* sendMsg);
+	void ProcSend();
+	void SendComplete();
 
 	bool Init(const uint16_t maxClientCount_);
 	// void PushPacket(const uint32_t size_, char* recvData_);
@@ -84,6 +87,7 @@ private:
 	// 136 bytes
 	boost::lockfree::queue<char*> procQueue{ 10 };
 	boost::lockfree::queue<uint16_t> roomNumQueue{ 10 }; // MaxClient set
+	boost::lockfree::queue<OverlappedEx*> sendQueue{ 10 };
 
 	// 80 bytes
 	std::mutex mDeleteRoom;
@@ -101,6 +105,9 @@ private:
 	OverlappedEx* recvOvLap;
 	OverlappedEx* sendOvLap;
 	OverLappedManager* overlappedManager;
+
+	// 2 bytes
+	std::atomic<uint16_t> sendQueueSize{ 0 };
 
 	// 1 bytes
 	std::atomic<bool> workRun;

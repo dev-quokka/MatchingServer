@@ -27,23 +27,30 @@ struct IM_MATCHING_RESPONSE : PACKET_HEADER {
 
 //  ---------------------------- RAID  ----------------------------
 
-struct RAID_MATCHING_REQUEST_TO_MATCHING_SERVER : PACKET_HEADER {
+struct MATCHING_REQUEST_TO_MATCHING_SERVER : PACKET_HEADER {
 	uint16_t userPk;
 	uint16_t userGroupNum;
 };
 
-struct RAID_MATCHING_RESPONSE_TO_CENTER_SERVER : PACKET_HEADER {
+// 매칭 insert 성공하면 메시지 따로 전송 X
+
+struct MATCHING_FAIL_RESPONSE : PACKET_HEADER { // MATCHING SERVER TO CENTER SERVER
+	uint16_t userPk;
+};
+
+struct MATCHING_SUCCESS_RESPONSE : PACKET_HEADER {
 	uint16_t roomNum;
 	uint16_t userNum1;
 	uint16_t userNum2;
 };
 
-struct RAID_MATCHING_FAIL_RESPONSE : PACKET_HEADER { // MATCHING SERVER TO CENTER SERVER
-	uint16_t userPk;
-};
-
-enum class PACKET_ID : uint16_t {
+enum class MATCHING_ID : uint16_t {
 	//SYSTEM
-	IM_MATCHING_REQUEST = 8, // 유저는 1번으로 요청
-	IM_MATCHING_RESPONSE = 9, // 유저는 1번으로 요청
+	IM_MATCHING_REQUEST = 1, // 유저는 1번으로 요청
+	IM_MATCHING_RESPONSE = 2, // 유저는 1번으로 요청
+	
+	//RAID(11~)
+	MATCHING_REQUEST_TO_MATCHING_SERVER = 11,
+	MATCHING_FAIL_RESPONSE = 12,
+	MATCHING_SUCCESS_RESPONSE = 13,
 };

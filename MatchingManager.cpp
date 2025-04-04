@@ -42,7 +42,7 @@ bool MatchingManager::Init(const uint16_t maxClientCount_) {
     std::cout << "Connect Center Server Success" << std::endl;
 
     IM_MATCHING_REQUEST imReq;
-    imReq.PacketId = (UINT16)PACKET_ID::IM_MATCHING_REQUEST;
+    imReq.PacketId = (UINT16)MATCHING_ID::IM_MATCHING_REQUEST;
     imReq.PacketLength = sizeof(IM_MATCHING_REQUEST);
 
     send(serverIOSkt, (char*)&imReq, sizeof(imReq), 0);
@@ -103,6 +103,58 @@ bool MatchingManager::RecvData() {
     return true;
 }
 
+void MatchingManager::PushSendMsg(const uint32_t dataSize_, char* sendMsg) {
+    OverlappedEx* tempOvLap = overlappedManager->getOvLap();
+
+    if (tempOvLap == nullptr) { // 오버랩 풀에 여분 없으면 새로 오버랩 생성
+        OverlappedEx* overlappedTCP = new OverlappedEx;
+        ZeroMemory(overlappedTCP, sizeof(OverlappedEx));
+        overlappedTCP->wsaBuf.len = PACKET_SIZE;
+        overlappedTCP->wsaBuf.buf = new char[PACKET_SIZE];
+        CopyMemory(overlappedTCP->wsaBuf.buf, sendMsg, dataSize_);
+        overlappedTCP->taskType = TaskType::NEWSEND;
+
+        sendQueue.push(overlappedTCP); // Push Send Msg To User
+        sendQueueSize.fetch_add(1);
+    }
+    else {
+        tempOvLap->wsaBuf.len = PACKET_SIZE;
+        tempOvLap->wsaBuf.buf = new char[PACKET_SIZE];
+        CopyMemory(tempOvLap->wsaBuf.buf, sendMsg, dataSize_);
+        tempOvLap->taskType = TaskType::SEND;
+
+        sendQueue.push(tempOvLap); // Push Send Msg To User
+        sendQueueSize.fetch_add(1);
+    }
+
+    if (sendQueueSize.load() == 1) {
+        ProcSend();
+    }
+}
+
+void MatchingManager::ProcSend() {
+    OverlappedEx* overlappedEx;
+
+    if (sendQueue.pop(overlappedEx)) {
+        DWORD dwSendBytes = 0;
+        int sCheck = WSASend(serverIOSkt,
+            &(overlappedEx->wsaBuf),
+            1,
+            &dwSendBytes,
+            0,
+            (LPWSAOVERLAPPED)overlappedEx,
+            NULL);
+    }
+}
+
+void MatchingManager::SendComplete() {
+    sendQueueSize.fetch_sub(1);
+
+    if (sendQueueSize.load() == 1) {
+        ProcSend();
+    }
+}
+
 //
 //void MatchingManager::PushPacket(const uint32_t size_, char* recvData_) {
 //	procQueue.push(recvData_); // Push Packet
@@ -122,10 +174,10 @@ void MatchingManager::PacketThread() {
 	while (packetRun) {
 		char* recvData = nullptr;
 		if (procQueue.pop(recvData)) { // Packet Exist
-            auto k = reinterpret_cast<RAID_MATCHING_REQUEST_TO_MATCHING_SERVER*>(recvData);
+            auto k = reinterpret_cast<MATCHING_REQUEST_TO_MATCHING_SERVER*>(recvData);
 
             if (!Insert(k->userPk, k->userGroupNum)) {
-                // 중앙 서버로 매칭 실패 전달
+                // 중앙 서버로 매칭 실패 메시지 전달
 
             }
 		}
@@ -218,10 +270,13 @@ void MatchingManager::WorkThread() {
             delete overlappedEx;
         }
         else if (overlappedEx->taskType == TaskType::SEND) {
-
+            overlappedManager->returnOvLap(overlappedEx);
+            SendComplete();
         }
         else if (overlappedEx->taskType == TaskType::NEWSEND) {
-
+            delete[] overlappedEx->wsaBuf.buf;
+            delete overlappedEx;
+            SendComplete();
         }
     }
 }
@@ -242,53 +297,24 @@ void MatchingManager::MatchingThread() {
                         if (!accessor1->second.empty()) { // 유저 한명이라도 있음
                             tempMatching1 = *accessor1->second.begin();
 
-                            if (tempMatching1->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userObjNum)
-                                ->GetObjNum()))->GetId()) { // 현재 접속중인 유저의 아이디와 비교해서 다르면 이미 나간 유저임으로 다음으로 넘어가기
-                                accessor1->second.erase(accessor1->second.begin());
-                                delete tempMatching1;
-                                continue;
-                            }
-
                             accessor1->second.erase(accessor1->second.begin());
 
                             if (!accessor1->second.empty()) { // 두번째 대기 유저가 있음
                                 tempMatching2 = *accessor1->second.begin();
 
-                                if (tempMatching2->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userObjNum)->GetObjNum()))
-                                    ->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
-                                    accessor1->second.erase(accessor1->second.begin());
-                                    delete tempMatching2;
-                                    continue;
-                                }
-
                                 accessor1->second.erase(accessor1->second.begin());
 
                                 { // 두명 유저 방 만들어서 넣어주기
-                                    RAID_READY_REQUEST rReadyResPacket1;
-                                    RAID_READY_REQUEST rReadyResPacket2;
+									MATCHING_SUCCESS_RESPONSE rMatchingResPacket;
 
                                     // Send to User1 With User2 Info
-                                    rReadyResPacket1.PacketId = (uint16_t)PACKET_ID::RAID_READY_REQUEST;
-                                    rReadyResPacket1.PacketLength = sizeof(RAID_READY_REQUEST);
-                                    rReadyResPacket1.timer = 2;
-                                    rReadyResPacket1.roomNum = tempRoomNum;
-                                    rReadyResPacket1.yourNum = 0;
-                                    rReadyResPacket1.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
+                                    rMatchingResPacket.PacketId = (uint16_t)MATCHING_ID::MATCHING_SUCCESS_RESPONSE;
+                                    rMatchingResPacket.PacketLength = sizeof(MATCHING_SUCCESS_RESPONSE);
+                                    rMatchingResPacket.roomNum = tempRoomNum;
+									rMatchingResPacket.userNum1 = tempMatching1->userObjNum;
+									rMatchingResPacket.userNum2 = tempMatching2->userObjNum;
 
-                                    // Send to User2 with User1 Info
-                                    rReadyResPacket2.PacketId = (uint16_t)PACKET_ID::RAID_READY_REQUEST;
-                                    rReadyResPacket2.PacketLength = sizeof(RAID_READY_REQUEST);
-                                    rReadyResPacket2.timer = 2;
-                                    rReadyResPacket2.roomNum = tempRoomNum;
-                                    rReadyResPacket2.yourNum = 1;
-                                    rReadyResPacket2.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
-
-                                    // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청 건 다 처리하고 방 생성)
-                                    connUsersManager->FindUser(tempMatching1->userObjNum)->PushSendMsg(sizeof(RAID_READY_REQUEST), (char*)&rReadyResPacket1);
-                                    connUsersManager->FindUser(tempMatching2->userObjNum)->PushSendMsg(sizeof(RAID_READY_REQUEST), (char*)&rReadyResPacket2);
-
-                                    endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userObjNum,
-                                        tempMatching2->userObjNum, tempMatching1->inGameUser, tempMatching2->inGameUser));
+									PushSendMsg(sizeof(MATCHING_SUCCESS_RESPONSE), (char*)&rMatchingResPacket);
                                 }
 
                                 delete tempMatching1;
@@ -318,49 +344,24 @@ void MatchingManager::MatchingThread() {
                     if (!accessor1->second.empty()) { // 유저 한명이라도 있음
                         tempMatching1 = *accessor1->second.begin();
 
-                        if (tempMatching1->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userObjNum)->GetObjNum()))->GetId()) { // 현재 접속중인 유저의 아이디와 비교해서 다르면 이미 나간 유저임으로 다음으로 넘어가기
-                            accessor1->second.erase(accessor1->second.begin());
-                            delete tempMatching1;
-                            continue;
-                        }
                         accessor1->second.erase(accessor1->second.begin());
 
                         if (!accessor1->second.empty()) { // 두번째 대기 유저가 있음
                             tempMatching2 = *accessor1->second.begin();
 
-                            if (tempMatching2->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userObjNum)->GetObjNum()))->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
-                                accessor1->second.erase(accessor1->second.begin());
-                                delete tempMatching2;
-                                continue;
-                            }
-
                             accessor1->second.erase(accessor1->second.begin());
 
                             { // 두명 유저 방 만들어서 넣어주기
-                                RAID_READY_REQUEST rReadyResPacket1;
-                                RAID_READY_REQUEST rReadyResPacket2;
+                                MATCHING_SUCCESS_RESPONSE rMatchingResPacket;
 
                                 // Send to User1 With User2 Info
-                                rReadyResPacket1.PacketId = (uint16_t)PACKET_ID::RAID_READY_REQUEST;
-                                rReadyResPacket1.PacketLength = sizeof(RAID_READY_REQUEST);
-                                rReadyResPacket1.timer = 2;
-                                rReadyResPacket1.roomNum = tempRoomNum;
-                                rReadyResPacket1.yourNum = 0;
-                                rReadyResPacket1.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
+                                rMatchingResPacket.PacketId = (uint16_t)MATCHING_ID::MATCHING_SUCCESS_RESPONSE;
+                                rMatchingResPacket.PacketLength = sizeof(MATCHING_SUCCESS_RESPONSE);
+                                rMatchingResPacket.roomNum = tempRoomNum;
+                                rMatchingResPacket.userNum1 = tempMatching1->userObjNum;
+                                rMatchingResPacket.userNum2 = tempMatching2->userObjNum;
 
-                                // Send to User2 with User1 Info
-                                rReadyResPacket2.PacketId = (uint16_t)PACKET_ID::RAID_READY_REQUEST;
-                                rReadyResPacket2.PacketLength = sizeof(RAID_READY_REQUEST);
-                                rReadyResPacket2.timer = 2;
-                                rReadyResPacket2.roomNum = tempRoomNum;
-                                rReadyResPacket2.yourNum = 1;
-                                rReadyResPacket2.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
-
-                                // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청 건 다 처리하고 방 생성)
-                                connUsersManager->FindUser(tempMatching1->userObjNum)->PushSendMsg(sizeof(RAID_READY_REQUEST), (char*)&rReadyResPacket1);
-                                connUsersManager->FindUser(tempMatching2->userObjNum)->PushSendMsg(sizeof(RAID_READY_REQUEST), (char*)&rReadyResPacket2);
-
-                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userObjNum, tempMatching2->userObjNum, tempMatching1->inGameUser, tempMatching2->inGameUser));
+                                PushSendMsg(sizeof(MATCHING_SUCCESS_RESPONSE), (char*)&rMatchingResPacket);
                             }
 
                             delete tempMatching1;
