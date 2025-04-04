@@ -1,4 +1,10 @@
 #pragma once
+#pragma comment(lib, "ws2_32.lib") // 비주얼에서 소켓프로그래밍 하기 위한 것
+#pragma comment(lib,"mswsock.lib") //AcceptEx를 사용하기 위한 것
+
+#define SERVER_IP "127.0.0.1"
+#define SERVER_PORT 9090
+#define PACKET_SIZE 512
 
 #include <set>
 #include <thread>
@@ -8,13 +14,19 @@
 #include <cstdint>
 #include <iostream>
 #include <winsock2.h>
+#include <windows.h>
 #include <ws2tcpip.h>
 #include <boost/lockfree/queue.hpp>
 #include <tbb/concurrent_hash_map.h>
 
+#include "Packet.h"
+#include "Define.h"
+#include "OverLappedManager.h"
+
 constexpr int UDP_PORT = 50000;
 constexpr uint16_t USER_MAX_LEVEL = 15;
 constexpr uint16_t MAX_ROOM = 10;
+constexpr uint16_t IOCP_THREAD_CNT = 1;
 
 struct MatchingRoom {
 	uint16_t userObjNum;
@@ -49,17 +61,28 @@ public:
 		}
 	}
 
-	void Init(const uint16_t maxClientCount_);
-	bool Insert(uint16_t userObjNum_, uint16_t groupNum_);
-	bool CancelMatching(uint16_t userObjNum_, uint16_t groupNum_);
+	bool RecvData();
+
+	bool Init(const uint16_t maxClientCount_);
+	// void PushPacket(const uint32_t size_, char* recvData_);
+	bool Insert(uint16_t userPk_, uint16_t userGroupNum_);
+	bool CancelMatching(uint16_t userPk_, uint16_t userGroupNum_);
+	bool CreateWorkThread();
+	bool CreatePacketThread();
 	bool CreateMatchThread();
+	void WorkThread();
+	void PacketThread();
 	void MatchingThread();
 
 private:
 	// 576 bytes
 	tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
 
+	// 512 bytes
+	char recvBuf[PACKET_SIZE];
+
 	// 136 bytes
+	boost::lockfree::queue<char*> procQueue{ 10 };
 	boost::lockfree::queue<uint16_t> roomNumQueue{ 10 }; // MaxClient set
 
 	// 80 bytes
@@ -67,8 +90,20 @@ private:
 	std::mutex mDeleteMatch;
 
 	// 16 bytes
+	std::thread workThread;
+	std::thread packetThread;
 	std::thread matchingThread;
 
+	// 8 bytes
+	SOCKET serverIOSkt;
+	HANDLE IOCPHandle;
+
+	OverlappedEx* recvOvLap;
+	OverlappedEx* sendOvLap;
+	OverLappedManager* overlappedManager;
+
 	// 1 bytes
+	std::atomic<bool> workRun;
+	std::atomic<bool> packetRun;
 	std::atomic<bool> matchRun;
 };

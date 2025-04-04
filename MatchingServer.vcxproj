@@ -130,11 +130,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="IOCPManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MatchingManager.cpp" />
+    <ClCompile Include="OverLappedManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Define.h" />
+    <ClInclude Include="IOCPManager.h" />
     <ClInclude Include="MatchingManager.h" />
+    <ClInclude Include="OverLappedManager.h" />
     <ClInclude Include="Packet.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
