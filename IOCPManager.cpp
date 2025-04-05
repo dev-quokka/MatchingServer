@@ -42,7 +42,7 @@ bool IOCPManager::Init() {
     std::cout << "Connect Center Server Success" << std::endl;
 
     IM_MATCHING_REQUEST imReq;
-    imReq.PacketId = (UINT16)PACKET_ID::IM_MATCHING_REQUEST;
+    imReq.PacketId = (UINT16)MATCHING_ID::IM_MATCHING_REQUEST;
     imReq.PacketLength = sizeof(IM_MATCHING_REQUEST);
 
     send(serverIOSkt, (char*)&imReq, sizeof(imReq), 0);
