@@ -1,9 +1,14 @@
 #pragma once
+#pragma once
 #pragma comment(lib, "ws2_32.lib") // 비주얼에서 소켓프로그래밍 하기 위한 것
 #pragma comment(lib,"mswsock.lib") //AcceptEx를 사용하기 위한 것
 
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 9090
+#define CENTER_SERVER_IP "127.0.0.1"
+#define CENTER_SERVER_PORT 9090
+
+#define GAME_SERVER_IP "127.0.0.1"
+#define GAME_SERVER_PORT 9501
+
 #define PACKET_SIZE 512
 
 #include <set>
@@ -20,33 +25,53 @@
 
 #include "Packet.h"
 #include "Define.h"
+#include "ConnServer.h"
+
 #include "OverLappedManager.h"
+#include "ConnServersManager.h"
 #include "MatchingManager.h"
+#include "PacketManager.h"
 
 constexpr uint16_t IOCP_THREAD_CNT = 1;
 
-class IOCPManager {
+class MatchingServer {
 public:
-	bool Init();
+	bool Init(const uint16_t MaxThreadCnt_, int port_);
+	bool StartWork();
 	bool CreateWorkThread();
 	void WorkThread();
+
+	void CenterServerConnect();
+	void GameServerConnect();
+
+	void ServerEnd();
 
 private:
 	// 512 bytes
 	char recvBuf[PACKET_SIZE];
 
-	// 16 bytes
-	std::thread workThread;
+	// 136 bytes 
+	boost::lockfree::queue<OverlappedEx*> sendQueue{ 10 };
+
+	// 32 bytes
+	std::vector<std::thread> workThreads;
 
 	// 8 bytes
 	SOCKET serverIOSkt;
 	HANDLE IOCPHandle;
 
+	OverLappedManager* overLappedManager;
+	ConnServersManager* connServersManager;
+	MatchingManager* matchingManager;
+	PacketManager* packetManager;
+
 	OverlappedEx* recvOvLap;
 	OverlappedEx* sendOvLap;
-	MatchingManager* matchingManager;
-	OverLappedManager* overlappedManager;
+
+	// 2 bytes
+	uint16_t MaxThreadCnt = 0;
 
 	// 1 bytes
 	bool workRun = false;
+	std::atomic<uint16_t> sendQueueSize{ 0 };
 };

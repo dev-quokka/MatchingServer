@@ -16,6 +16,12 @@
     <Filter Include="헤더 파일\MatchingManager">
       <UniqueIdentifier>{0191e62c-786c-48ad-a4bf-198fc37eeabf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="헤더 파일\OverLappedManager">
+      <UniqueIdentifier>{18498662-2382-4c6d-b868-2468ddb6a058}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\CircularBuffer">
+      <UniqueIdentifier>{a18d1db0-35a1-49f1-b6ff-4e2004ca985c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -25,9 +31,18 @@
       <Filter>헤더 파일\MatchingManager</Filter>
     </ClCompile>
     <ClCompile Include="OverLappedManager.cpp">
+      <Filter>헤더 파일\OverLappedManager</Filter>
+    </ClCompile>
+    <ClCompile Include="MatchingServer.cpp">
       <Filter>헤더 파일</Filter>
     </ClCompile>
-    <ClCompile Include="IOCPManager.cpp">
+    <ClCompile Include="CircularBuffer.cpp">
+      <Filter>헤더 파일\CircularBuffer</Filter>
+    </ClCompile>
+    <ClCompile Include="ConnServersManager.cpp">
+      <Filter>헤더 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketManager.cpp">
       <Filter>헤더 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -42,9 +57,21 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="OverLappedManager.h">
+      <Filter>헤더 파일\OverLappedManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MatchingServer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="IOCPManager.h">
+    <ClInclude Include="ConnServer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CircularBuffer.h">
+      <Filter>헤더 파일\CircularBuffer</Filter>
+    </ClInclude>
+    <ClInclude Include="ConnServersManager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

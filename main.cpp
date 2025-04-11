@@ -1,7 +1,10 @@
 #include <iostream>
 #include <sw/redis++/redis++.h>
 
-#include "MatchingManager.h"
+#include "MatchingServer.h"
+
+constexpr uint16_t MATCHING_SERVER_PORT = 9131;
+constexpr uint16_t maxThreadCount = 1;
 
 int main() {
     std::shared_ptr<sw::redis::RedisCluster> redis;
@@ -22,7 +25,20 @@ int main() {
         std::cout << "Redis 에러 발생: " << err.what() << std::endl;
     }
 
-	MatchingManager matchingManager;
+	MatchingServer matchingServer;
+    matchingServer.Init(maxThreadCount, MATCHING_SERVER_PORT);
+    matchingServer.StartWork();
+
+    std::cout << "=== MATCHING SERVER START ===" << std::endl;
+    std::cout << "=== If You Want Exit, Write matching ===" << std::endl;
+    std::string k = "";
+
+    while (1) {
+        std::cin >> k;
+        if (k == "matching") break;
+    }
+
+    matchingServer.ServerEnd();
 
 	return 0;
 }
