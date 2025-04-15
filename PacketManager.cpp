@@ -24,7 +24,7 @@ void PacketManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis 
         connection_options.keep_alive = true;
 
         redis = std::make_unique<sw::redis::RedisCluster>(connection_options);
-        std::cout << "Redis Cluster Connect Success !" << std::endl;
+        std::cout << "Redis Cluster Connected" << std::endl;
 
         CreateRedisThread(RedisThreadCnt_);
     }
@@ -86,11 +86,11 @@ void PacketManager::ImMatchingResponse(uint16_t connObjNum_, uint16_t packetSize
     auto centerConn = reinterpret_cast<IM_MATCHING_RESPONSE*>(pPacket_);
 
     if (!centerConn->isSuccess) {
-        std::cout << "Connected Fail to the center server" << std::endl;
+        std::cout << "Failed to Authenticate with Center Server" << std::endl;
         return;
     }
 
-    std::cout << "Connected to the center server" << std::endl;
+    std::cout << "Successfully Authenticated with Center Server" << std::endl;
 }
 
 void PacketManager::ServerDisConnect(uint16_t connObjNum_) { // Abnormal Disconnect
@@ -106,12 +106,13 @@ void PacketManager::ImGameRequest(uint16_t connObjNum_, uint16_t packetSize_, ch
     imResPacket.PacketLength = sizeof(MATCHING_SERVER_CONNECT_RESPONSE);
 
     if (!connServersManager->CheckGameServerObjNum(tempNum)) { // 이미 번호 있으면 연결 실패 전송
+        std::cout << "Failed to Authenticated with Game Server" << tempNum << std::endl;
         imResPacket.isSuccess = false;
     }
     else {
         connServersManager->SetGameServerObjNum(tempNum, connObjNum_);
         imResPacket.isSuccess = true;
-        std::cout << "Connected to the Game server" << tempNum << std::endl;
+        std::cout << "Successfully Authenticated with Game Server" << tempNum << std::endl;
     }
 
     connServersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MATCHING_SERVER_CONNECT_RESPONSE), (char*)&imResPacket);
@@ -127,7 +128,6 @@ void PacketManager::MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char*
     matchResPacket.PacketLength = sizeof(MATCHING_RESPONSE_FROM_MATCHING_SERVER);
     matchResPacket.userCenterObjNum = matchingManager->Insert(matchingReqPacket->userPk, matchingReqPacket->userCenterObjNum, matchingReqPacket->userGroupNum);
     
-    // 매칭 쓰레드 insert 성공 여부 전달
     if (matchResPacket.userCenterObjNum == 0) matchResPacket.isSuccess = false;
     else matchResPacket.isSuccess = true;
 
@@ -141,7 +141,6 @@ void PacketManager::MatchingCancel(uint16_t connObjNum_, uint16_t packetSize_, c
     matchCancelResPacket.PacketId = (uint16_t)PACKET_ID::MATCHING_CANCEL_RESPONSE_FROM_MATCHING_SERVER;
     matchCancelResPacket.PacketLength = sizeof(MATCHING_CANCEL_RESPONSE_FROM_MATCHING_SERVER);
 
-    // 매칭 취소 성공 여부 전달
     if (!matchingManager->CancelMatching(matchingReqPacket->userCenterObjNum, matchingReqPacket->userGroupNum)) {
         matchCancelResPacket.isSuccess = false;
     }

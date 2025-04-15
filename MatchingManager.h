@@ -23,18 +23,17 @@
 #include "OverLappedManager.h"
 #include "ConnServersManager.h"
 
-constexpr int UDP_PORT = 50000;
-constexpr uint16_t USER_MAX_LEVEL = 15;
-constexpr uint16_t MAX_ROOM = 10;
+constexpr uint16_t USER_LEVEL_GROUPS = 15 / 3 + 1; // To set the number of groups
+constexpr uint16_t MAX_ROOM = 10; // Max rooms per Game Server
 
-struct MatchingRoom {
+struct MatchingRoom { // User data used for matching 
+	std::chrono::time_point<std::chrono::steady_clock> insertTime = std::chrono::steady_clock::now();
 	uint16_t userPk; 
 	uint16_t userCenterObjNum;
-	std::chrono::time_point<std::chrono::steady_clock> insertTime = std::chrono::steady_clock::now();
 	MatchingRoom(uint16_t userPk_, uint16_t userCenterObjNum_) : userPk(userPk_), userCenterObjNum(userCenterObjNum_) {}
 };
 
-struct MatchingRoomComp {
+struct MatchingRoomComp { // Comparator struct based on matchmaking start time
 	bool operator()(MatchingRoom* r1, MatchingRoom* r2) const {
 		return r1->insertTime > r2->insertTime;
 	}
@@ -69,14 +68,14 @@ public:
 
 private:
 	// 576 bytes
-	tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
+	tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>> matchingMap;
 
 	// 512 bytes
 	char recvBuf[PACKET_SIZE] = {0};
 
 	// 136 bytes
 	boost::lockfree::queue<char*> procQueue{ 10 };
-	boost::lockfree::queue<uint16_t> roomNumQueue{ 10 }; // MaxClient set
+	boost::lockfree::queue<uint16_t> roomNumQueue{ MAX_ROOM };
 	boost::lockfree::queue<OverlappedEx*> sendQueue{ 10 };
 
 	// 80 bytes

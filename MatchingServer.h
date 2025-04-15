@@ -1,7 +1,6 @@
 #pragma once
-#pragma once
-#pragma comment(lib, "ws2_32.lib") // 비주얼에서 소켓프로그래밍 하기 위한 것
-#pragma comment(lib,"mswsock.lib") //AcceptEx를 사용하기 위한 것
+#pragma comment(lib, "ws2_32.lib") 
+#pragma comment(lib,"mswsock.lib")
 
 #define CENTER_SERVER_IP "127.0.0.1"
 #define CENTER_SERVER_PORT 9090
@@ -26,7 +25,6 @@
 #include "Packet.h"
 #include "Define.h"
 #include "ConnServer.h"
-
 #include "OverLappedManager.h"
 #include "ConnServersManager.h"
 #include "MatchingManager.h"
