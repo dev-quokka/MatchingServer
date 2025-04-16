@@ -39,7 +39,7 @@ public:
 	bool CreateWorkThread();
 	bool CreateAccepterThread();
 	void WorkThread();
-	void AccepterThread(); // Accept req Thread
+	void AccepterThread();
 	void ServerEnd();
 
 	bool CenterServerConnect();
@@ -49,7 +49,7 @@ private:
 
 	// 136 bytes 
 	boost::lockfree::queue<OverlappedEx*> sendQueue{ 10 };
-	boost::lockfree::queue<ConnServer*> AcceptQueue{ SERVER_COUNT }; // For Aceept User Queue
+	boost::lockfree::queue<ConnServer*> AcceptQueue{ SERVER_COUNT };
 
 	// 32 bytes
 	std::vector<std::thread> workThreads;

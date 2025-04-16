@@ -13,7 +13,7 @@
 #include "ConnServersManager.h"
 #include "MatchingManager.h"
 
-constexpr int MAX_PACKET_SIZE = 128;
+constexpr int MAX_MATCHNIG_PACKET_SIZE = 128;
 
 class PacketManager {
 public:
@@ -50,7 +50,7 @@ private:
 
     // 242 bytes
     sw::redis::ConnectionOptions connection_options;
-    boost::lockfree::queue<DataPacket> procSktQueue{ MAX_PACKET_SIZE };
+    boost::lockfree::queue<DataPacket> procSktQueue{ MAX_MATCHNIG_PACKET_SIZE };
 
     // 80 bytes
     std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;

@@ -68,23 +68,21 @@ bool MatchingServer::CenterServerConnect() {
 
     centerObj->ServerRecv();
 
-    IM_MATCHING_REQUEST imReq;
-    imReq.PacketId = (UINT16)PACKET_ID::IM_MATCHING_REQUEST;
-    imReq.PacketLength = sizeof(IM_MATCHING_REQUEST);
+    MATCHING_SERVER_CONNECT_REQUEST imReq;
+    imReq.PacketId = (UINT16)PACKET_ID::MATCHING_SERVER_CONNECT_REQUEST;
+    imReq.PacketLength = sizeof(MATCHING_SERVER_CONNECT_REQUEST);
 
-    centerObj->PushSendMsg(sizeof(IM_MATCHING_REQUEST), (char*)&imReq);
+    centerObj->PushSendMsg(sizeof(MATCHING_SERVER_CONNECT_REQUEST), (char*)&imReq);
 
     return true;
 }
 
 bool MatchingServer::StartWork() {
-    bool check = CreateWorkThread();
-    if (!check) {
+    if (!CreateWorkThread()) {
         return false;
     }
 
-    check = CreateAccepterThread();
-    if (!check) {
+    if (!CreateAccepterThread()) {
         return false;
     }
 
@@ -169,9 +167,16 @@ void MatchingServer::WorkThread() {
         connServer = connServersManager->FindUser(connObjNum);
 
         if (!gqSucces || (dwIoSize == 0 && overlappedEx->taskType != TaskType::ACCEPT)) { // Server Disconnect
+            std::cout << "socket " << connServer->GetSocket() << " Disconnected" << std::endl;
+            
             if (connObjNum == 0) {
                 std::cout << "Center Server Disconnected" << std::endl;
+                ServerEnd();
+                exit(0);
             }
+
+            connServer->Reset(); // Reset 
+            AcceptQueue.push(connServer);
             continue;
         }
         if (overlappedEx->taskType == TaskType::ACCEPT) { // User Connect

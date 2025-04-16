@@ -6,12 +6,12 @@ void PacketManager::init(const uint16_t RedisThreadCnt_) {
     packetIDTable = std::unordered_map<uint16_t, RECV_PACKET_FUNCTION>();
 
     // SYSTEM
-    packetIDTable[(uint16_t)PACKET_ID::IM_MATCHING_RESPONSE] = &PacketManager::ImMatchingResponse;
+    packetIDTable[(uint16_t)PACKET_ID::MATCHING_SERVER_CONNECT_RESPONSE] = &PacketManager::ImMatchingResponse;
 
     packetIDTable[(uint16_t)PACKET_ID::MATCHING_REQUEST_TO_MATCHING_SERVER] = &PacketManager::MatchStart;
     packetIDTable[(uint16_t)PACKET_ID::MATCHING_CANCEL_REQUEST_TO_MATCHING_SERVER] = &PacketManager::MatchingCancel;
 
-    packetIDTable[(uint16_t)PACKET_ID::MATCHING_SERVER_CONNECT_REQUEST] = &PacketManager::ImGameRequest;
+    packetIDTable[(uint16_t)PACKET_ID::MATCHING_SERVER_CONNECT_REQUEST_FROM_RAID_SERVER] = &PacketManager::ImGameRequest;
 
     RedisRun(RedisThreadCnt_);
 }
@@ -83,7 +83,7 @@ void PacketManager::PushPacket(const uint16_t connObjNum_, const uint32_t size_,
 //  ---------------------------- SYSTEM  ----------------------------
 
 void PacketManager::ImMatchingResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    auto centerConn = reinterpret_cast<IM_MATCHING_RESPONSE*>(pPacket_);
+    auto centerConn = reinterpret_cast<MATCHING_SERVER_CONNECT_RESPONSE*>(pPacket_);
 
     if (!centerConn->isSuccess) {
         std::cout << "Failed to Authenticate with Center Server" << std::endl;
@@ -98,12 +98,12 @@ void PacketManager::ServerDisConnect(uint16_t connObjNum_) { // Abnormal Disconn
 }
 
 void PacketManager::ImGameRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_){
-    auto centerConn = reinterpret_cast<MATCHING_SERVER_CONNECT_REQUEST*>(pPacket_);
+    auto centerConn = reinterpret_cast<MATCHING_SERVER_CONNECT_REQUEST_FROM_RAID_SERVER*>(pPacket_);
     auto tempNum = centerConn->gameServerNum;
 
-    MATCHING_SERVER_CONNECT_RESPONSE imResPacket;
-    imResPacket.PacketId = (uint16_t)PACKET_ID::MATCHING_SERVER_CONNECT_RESPONSE;
-    imResPacket.PacketLength = sizeof(MATCHING_SERVER_CONNECT_RESPONSE);
+    MATCHING_SERVER_CONNECT_RESPONSE_TO_RAID_SERVER imResPacket;
+    imResPacket.PacketId = (uint16_t)PACKET_ID::MATCHING_SERVER_CONNECT_RESPONSE_TO_RAID_SERVER;
+    imResPacket.PacketLength = sizeof(MATCHING_SERVER_CONNECT_RESPONSE_TO_RAID_SERVER);
 
     if (!connServersManager->CheckGameServerObjNum(tempNum)) { // 이미 번호 있으면 연결 실패 전송
         std::cout << "Failed to Authenticated with Game Server" << tempNum << std::endl;
@@ -115,7 +115,7 @@ void PacketManager::ImGameRequest(uint16_t connObjNum_, uint16_t packetSize_, ch
         std::cout << "Successfully Authenticated with Game Server" << tempNum << std::endl;
     }
 
-    connServersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MATCHING_SERVER_CONNECT_RESPONSE), (char*)&imResPacket);
+    connServersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MATCHING_SERVER_CONNECT_RESPONSE_TO_RAID_SERVER), (char*)&imResPacket);
 }
 
 //  ---------------------------- RAID  ----------------------------
