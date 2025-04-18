@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Packet.h"
 #include "Define.h"
 #include "CircularBuffer.h"
-#include "Packet.h"
 #include "overLappedManager.h"
 
 #include <cstdint>
@@ -34,9 +34,36 @@ public:
 	}
 
 public:
+	// ======================= INITIALIZATION =======================
+
+	void Reset() { // Reset connuser object socket
+		shutdown(serverSkt, SD_BOTH);
+		closesocket(serverSkt);
+
+		serverSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
+
+		if (serverSkt == INVALID_SOCKET) {
+			std::cout << "Client socket Error : " << GetLastError() << std::endl;
+		}
+
+		auto tIOCPHandle = CreateIoCompletionPort((HANDLE)serverSkt, sIOCPHandle, (ULONG_PTR)0, 0);
+
+		if (tIOCPHandle == INVALID_HANDLE_VALUE)
+		{
+			std::cout << "Fail to reateIoCompletionPort :" << GetLastError() << std::endl;
+		}
+
+	}
+
+
+	// ======================= IDENTIFICATION =======================
+
 	SOCKET& GetSocket() {
 		return serverSkt;
 	}
+
+
+	// ======================= CIRCULAR BUFFER =======================
 
 	bool WriteRecvData(const char* data_, uint32_t size_) { // Set recvdata in circular buffer 
 		return circularBuffer->Write(data_, size_);
@@ -58,24 +85,7 @@ public:
 		}
 	}
 
-	void Reset() { // Reset connuser object socket
-		shutdown(serverSkt, SD_BOTH);
-		closesocket(serverSkt);
-
-		serverSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
-
-		if (serverSkt == INVALID_SOCKET) {
-			std::cout << "Client socket Error : " << GetLastError() << std::endl;
-		}
-
-		auto tIOCPHandle = CreateIoCompletionPort((HANDLE)serverSkt, sIOCPHandle, (ULONG_PTR)0, 0);
-
-		if (tIOCPHandle == INVALID_HANDLE_VALUE)
-		{
-			std::cout << "Fail to reateIoCompletionPort :" << GetLastError() << std::endl;
-		}
-
-	}
+	// ======================= ACCEPT =======================
 
 	bool PostAccept(SOCKET ServerSkt_) {
 		acceptOvlap = {};
@@ -97,6 +107,9 @@ public:
 
 		return true;
 	}
+
+
+	// ======================= RECV =======================
 
 	bool ServerRecv() {
 		OverlappedEx* tempOvLap = (overLappedManager->getOvLap());
@@ -128,6 +141,9 @@ public:
 
 		return true;
 	}
+
+
+	// ======================= SEND =======================
 
 	void PushSendMsg(const uint32_t dataSize_, char* sendMsg) {
 		OverlappedEx* tempOvLap = overLappedManager->getOvLap();
@@ -187,7 +203,7 @@ private:
 	}
 
 	// 1024 bytes
-	char readData[1024] = { 0 };
+	char readData[MAX_RECV_SIZE] = { 0 };
 
 	// 136 bytes 
 	boost::lockfree::queue<OverlappedEx*> sendQueue{ 10 };

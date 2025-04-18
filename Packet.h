@@ -28,7 +28,8 @@ struct PACKET_HEADER
 	uint16_t PacketId;
 };
 
-//  ---------------------------- SYSTEM  ----------------------------
+
+// ======================= MATCHING SERVER =======================
 
 struct MATCHING_SERVER_CONNECT_REQUEST : PACKET_HEADER {
 
@@ -37,9 +38,6 @@ struct MATCHING_SERVER_CONNECT_REQUEST : PACKET_HEADER {
 struct MATCHING_SERVER_CONNECT_RESPONSE : PACKET_HEADER {
 	bool isSuccess;
 };
-
-
-//  ---------------------------- MATCHING  ----------------------------
 
 struct MATCHING_REQUEST_TO_MATCHING_SERVER : PACKET_HEADER {
 	uint16_t userPk; 
@@ -67,7 +65,7 @@ struct MATCHING_CANCEL_RESPONSE_FROM_MATCHING_SERVER : PACKET_HEADER {
 };
 
 
-//  ---------------------------- RAID  ----------------------------
+// ======================= RAID GAME SERVER =======================
 
 struct MATCHING_SERVER_CONNECT_REQUEST_FROM_RAID_SERVER : PACKET_HEADER {
 	uint16_t gameServerNum;
@@ -78,12 +76,11 @@ struct MATCHING_SERVER_CONNECT_RESPONSE_TO_RAID_SERVER : PACKET_HEADER {
 };
 
 struct MATCHING_REQUEST_TO_GAME_SERVER : PACKET_HEADER {
-	uint16_t userPk1;
-	uint16_t userPk2;
-	uint16_t userCenterObjNum1;
-	uint16_t userCenterObjNum2;
+	uint16_t userPk;
+	uint16_t userCenterObjNum;
 	uint16_t roomNum;
 };
+
 
 enum class PACKET_ID : uint16_t {
 	//SYSTEM (5001~)

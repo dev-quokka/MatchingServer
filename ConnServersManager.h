@@ -18,8 +18,13 @@ public:
         }
     }
 
-    void InsertUser(uint16_t connObjNum, ConnServer* connServer_); // Init ConnUsers
-    ConnServer* FindUser(uint16_t connObjNum);
+
+    // ================== CONNECTION SERVER MANAGEMENT ==================
+    void InsertServer(uint16_t connObjNum, ConnServer* connServer_); // Init ConnUsers
+    ConnServer* FindServer(uint16_t connObjNum);
+
+
+    // =============== CONNECTION GAME SERVER MANAGEMENT ================
     bool CheckGameServerObjNum(uint16_t idx_);
     void SetGameServerObjNum(uint16_t idx_,uint16_t gameServerObjNums_); // Set unique ID for the Game Server
     ConnServer* GetGameServerObjNum(uint16_t idx_);
