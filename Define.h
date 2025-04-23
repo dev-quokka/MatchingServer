@@ -4,7 +4,10 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <mswsock.h>
+#include <windows.h>
+#include <mswsock.h>
 #include <cstdint>
+#include <iostream>
 #include <boost/lockfree/queue.hpp>
 
 const uint32_t MAX_RECV_SIZE = 1024; // Set Max Recv Buf
